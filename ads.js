@@ -21,9 +21,10 @@ window.ADS = (function () {
     // Boşaltırsan reklam katmanı tamamen devre dışı kalır (fuar sürümü için).
     GAME_ID: 'aot3i031m3o60mzd9scv1sxbrsptjfd4',
 
-    // Oyun çocuklara yönelik. Bu bayrak reklam ağına kişiselleştirilmemiş
-    // reklam sunmasını bildirir. ÇOCUK OYUNLARINDA AÇIK BIRAK.
-    CHILD_DIRECTED: true,
+    /* DİKKAT: Çocuk içeriği bildirimi KODDAN yapılamaz. GameMonetize
+       SDK'sının böyle bir ayarı yok. Bildirimi yayıncı panelinden
+       (oyun ayarları / kategori) yapman gerekir. AB'de DSA 28. madde
+       gereği reşit olmayanlara profil bazlı reklam yasaktır. */
 
     // Reklam en fazla bu kadar bekletir; süre dolarsa oyun devam eder.
     // Fuarda takılı kalan bir reklam = ölü oyun. Bu yüzden şart.
@@ -49,11 +50,11 @@ window.ADS = (function () {
     if (!enabled() || loading) return;
     loading = true;
 
+    /* SDK yalnızca gameId ve onEvent tanır (resmî SDK belgesi).
+       Buraya başka anahtar eklemeyin — tanınmayan ayarlar en iyi
+       ihtimalle yok sayılır, kötü ihtimalle doğrulamayı bozar. */
     window.SDK_OPTIONS = {
       gameId: CFG.GAME_ID.trim(),
-      // Çocuklara yönelik içerik bildirimi
-      advertisementSettings: { autoplay: false },
-      childDirected: CFG.CHILD_DIRECTED,
       onEvent: function (e) {
         switch (e.name) {
           case 'SDK_READY':
