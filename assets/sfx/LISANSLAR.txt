@@ -1,0 +1,24 @@
+SES DOSYALARI — LİSANS BİLGİSİ
+==============================
+
+flip.ogg, match.ogg, wrong.ogg
+  Kaynak : Kenney — "Interface Sounds" (kenney.nl/assets/interface-sounds)
+  Lisans : CC0 1.0 (Kamu Malı) — atıf zorunlu değil
+
+level.ogg
+  Kaynak : Kenney — "Music Jingles" (kenney.nl/assets/music-jingles)
+  Lisans : CC0 1.0 (Kamu Malı) — atıf zorunlu değil
+
+music.mp3  ("Children's March Theme")
+  Besteci: Cleyton Kauffman
+  Kaynak : OpenGameArt.org/content/childrens-march-theme
+  Lisans : CC0 1.0 (Kamu Malı) — atıf zorunlu değil
+  Bestecinin isteği (zorunlu değil, nezaket):
+    "Music by Cleyton Kauffman - https://soundcloud.com/cleytonkauffman"
+
+GÖRSELLER
+=========
+assets/ulku-child.jpg  ve diğer fotoğraflar
+  Kaynak : Wikimedia Commons
+  Lisans : "Public domain in Turkey" (telif süresi dolmuş / milli miras)
+Oyun içindeki tüm kart illüstrasyonları bu proje için özgün çizilmiştir.

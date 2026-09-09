@@ -1,0 +1,9 @@
+{
+  "name": "Atatürk, Ülkü ve Foxy — Hafıza Oyunu",
+  "short_name": "Hafıza Oyunu",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF7E9",
+  "theme_color": "#FFF3E2"
+}
