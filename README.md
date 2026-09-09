@@ -121,14 +121,14 @@ koymana izin verirler, trafik şartı yoktur).
 git init && git add . && git commit -m "Hafiza oyunu"
 ```
 
-3. Uzak adresi ekleyip gönder (KULLANICI'yı kendi adınla değiştir):
+3. Uzak adresi ekleyip gönder :
 
 ```bash
-git remote add origin https://github.com/KULLANICI/hafiza-oyunu.git && git branch -M main && git push -u origin main
+git remote add origin https://github.com/gezicienes/hafiza-oyunu.git && git branch -M main && git push -u origin main
 ```
 
 4. Repo → **Settings → Pages → Source: Deploy from a branch → main / (root)**.
-5. 1–2 dakika sonra adres: `https://KULLANICI.github.io/hafiza-oyunu/`
+5. 1–2 dakika sonra adres: `https://gezicienes.github.io/hafiza-oyunu/`
 
 ### Seçenek B — itch.io (en hızlı, git gerekmez)
 

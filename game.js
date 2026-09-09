@@ -10,8 +10,9 @@
 const CONFIG = {
   /* Reklam: ads.js içindeki GAME_ID doluysa çalışır, boşsa hiç çıkmaz.
      Yani fuar sürümü için ayrıca bir şey yapmana gerek yok.
-     ADS_EVERY_N_LEVELS = 2  →  her 2 bölümde bir reklam. */
-  ADS_EVERY_N_LEVELS: 2,
+     ADS_EVERY_N_LEVELS = 3  →  her 3 bölümde bir reklam (~16 reklam / 50 bölüm).
+     Daha sık istersen 2, daha seyrek istersen 4 yap. */
+  ADS_EVERY_N_LEVELS: 3,
 
   LEVELS: 50,
   FLIP_BACK_MS: 900,
