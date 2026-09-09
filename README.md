@@ -94,25 +94,42 @@ hiçbir tarayıcıda sessiz kalmaz.
 
 ## Reklamlar
 
-Ağ: **GameMonetize**. Entegrasyon hazır — `ads.js` içindeki tek satır:
+Ağ: **GameMonetize**. Game ID `ads.js` içinde bağlı:
 
 ```js
-GAME_ID: '',   // GameMonetize'dan gelen 32 haneli ID buraya
+GAME_ID: 'aot3i031m3o60mzd9scv1sxbrsptjfd4',
 ```
 
-**Boşken reklam katmanı tamamen kapalıdır.** Yani fuar sürümü için ayrıca
-bir şey yapmana gerek yok; ID'yi fuardan sonra eklersin.
+**Bu satırı boşaltırsan reklam katmanı tamamen kapanır** — reklamsız bir
+fuar sürümü istersen tek yapman gereken bu.
 
-Sıralama önemli: GameMonetize oyunu kaydederken çalışan bir URL ister.
-Önce yayınla → sonra kaydol → ID'yi yapıştır → tekrar gönder.
+> GameMonetize yeni oyunlara, içerik yöneticisi **onaylayana kadar**
+> reklam sunmaz. Onaydan önce "reklam gelmiyor" normaldir.
 
 Kurulu güvenlik önlemleri:
 
 | Ayar | Değer | Neden |
 |------|-------|-------|
-| `TIMEOUT_MS` | 8000 | Reklam cevap vermezse oyun kilitlenmesin (fuarda kritik) |
+| `TIMEOUT_MS` | 8000 | Araya giren reklam cevap vermezse oyun kilitlenmesin (fuarda kritik) |
+| `REWARD_TIMEOUT_MS` | 3500 | Ödüllü reklamda çocuk ekrana bakıp bekliyor, kısa tutuldu |
 | `MIN_GAP_S` | 45 | İki reklam arası en az 45 saniye |
 | `CHILD_DIRECTED` | `true` | Çocuk içeriği bildirimi |
+
+**İpucu reklamı başarısız olsa bile ipucu verilir.** Reklam ağının doluluk
+sorunu oyuncunun cezası değildir; bkz. `game.js` → `useHint()`.
+
+### Paket üretme
+
+GameMonetize'a yüklenecek zip'i **her zaman** şu betikle üret:
+
+```bash
+powershell -ExecutionPolicy Bypass -File build-zip.ps1
+```
+
+Betik iki tuzağı birden aşar: zip yollarını düz bölüyle yazar
+(`Compress-Archive` ters bölü yazıyor ve dosyalar 404 dönüyor) ve kod
+dosyalarını sürümler (`game.js` → `game.2609091040.js`) — böylece CDN
+yeni `index.html` ile eski `game.js`'i eşleştiremez.
 
 ### Çocuk oyunu olması gelirini etkiler
 
@@ -144,7 +161,7 @@ git push -u origin main
 ```
 
 3. Repo → **Settings → Pages → Source: Deploy from a branch → main / (root)** → Save.
-4. 1–2 dakika sonra adres: `https://gezicienes.github.io/hafiza-oyunu/`
+4. 1–2 dakika sonra adres: `https://princeagonie.github.io/hafiza-oyunu/`
 
 ### Seçenek B — itch.io (en hızlı, git gerekmez)
 
