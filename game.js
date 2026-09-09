@@ -396,40 +396,58 @@ function renderMap(region){
    Açılmış kartlar toplanır; kilitliler "?" olarak görünür.
    Bir karta dokununca hikâyesi altta belirir.
    --------------------------------------------------------- */
-function renderCollection(){
+let collIndex = 0;
+
+// i numaralı kart hangi bölümde açılıyor?
+function levelThatUnlocks(i){
+  for (let n = 1; n <= CONFIG.LEVELS; n++){
+    if (unlockedCardCount(n) > i) return n;
+  }
+  return CONFIG.LEVELS;
+}
+
+function showCollCard(i, yon){
   const acik = unlockedCardCount(save.unlocked);
-  const grid = $('#coll-grid');
-  grid.innerHTML = '';
+  collIndex = Math.max(0, Math.min(CONFIG.POOL.length - 1, i));
 
-  CONFIG.POOL.forEach((c, i) => {
-    const locked = i >= acik;
-    const b = document.createElement('button');
-    b.className = 'coll-item' + (locked ? ' locked' : '');
-    b.type = 'button';
-    b.setAttribute('aria-label', locked ? 'Kilitli kart' : c.name);
-    b.innerHTML = '<span class="tint" style="--tint:' + c.tint + '"></span>' +
-                  '<svg class="art"><use href="' + c.art + '"></use></svg>';
-    b.addEventListener('click', () => {
-      $$('.coll-item').forEach(x => x.classList.remove('sel'));
-      b.classList.add('sel');
-      if (locked){
-        $('#coll-detail-use').setAttribute('href', '#ui-lock');
-        $('#coll-detail-name').textContent = 'Henüz kilitli';
-        $('#coll-detail-fact').textContent = 'Bölümleri geçtikçe yeni kartlar açılır.';
-      } else {
-        $('#coll-detail-use').setAttribute('href', c.art);
-        $('#coll-detail-name').textContent = c.name;
-        $('#coll-detail-fact').textContent = c.fact;
-      }
-      beep(600, 0.04, 'sine', 0.07);
-    });
-    grid.appendChild(b);
-  });
+  const c      = CONFIG.POOL[collIndex];
+  const locked = collIndex >= acik;
+  const kart   = $('#coll-card');
 
-  $('#coll-count').textContent = acik;
-  $('#coll-detail-use').setAttribute('href', '#art-foxy');
-  $('#coll-detail-name').textContent = 'Bir karta dokun';
-  $('#coll-detail-fact').textContent = 'Açtığın kartların hikâyesini burada okuyabilirsin.';
+  kart.classList.toggle('locked', locked);
+  kart.style.setProperty('--tint', c.tint);
+  $('#coll-use').setAttribute('href', c.art);
+
+  if (locked){
+    $('#coll-name').textContent = 'Henüz kilitli';
+    $('#coll-fact').textContent = 'Bu kart ' + levelThatUnlocks(collIndex) + '. bölümde açılıyor.';
+  } else {
+    $('#coll-name').textContent = c.name;
+    $('#coll-fact').textContent = c.fact;
+  }
+
+  $('#coll-i').textContent = collIndex + 1;
+  $('#coll-prev').disabled = collIndex === 0;
+  $('#coll-next').disabled = collIndex === CONFIG.POOL.length - 1;
+
+  // giriş animasyonunu geldiği yöne göre yeniden oynat
+  kart.style.setProperty('--from', (yon === -1 ? '-24px' : '24px'));
+  kart.style.animation = 'none';
+  void kart.offsetWidth;
+  kart.style.animation = '';
+}
+
+function collStep(d){
+  const yeni = collIndex + d;
+  if (yeni < 0 || yeni >= CONFIG.POOL.length) return;
+  beep(620, 0.04, 'sine', 0.07);
+  buzz(8);
+  showCollCard(yeni, d);
+}
+
+function renderCollection(){
+  $('#coll-count').textContent = unlockedCardCount(save.unlocked);
+  showCollCard(0, 1);
 }
 
 /* ---------------------------------------------------------
@@ -764,6 +782,27 @@ $('#btn-continue').addEventListener('click', () => {
 });
 
 $('#btn-hint').addEventListener('click', useHint);
+
+/* ---------- koleksiyonda gezinme ---------- */
+$('#coll-prev').addEventListener('click', () => collStep(-1));
+$('#coll-next').addEventListener('click', () => collStep(1));
+
+// parmakla kaydırma
+let swipeX = null;
+const stage = $('#coll-stage');
+stage.addEventListener('touchstart', e => { swipeX = e.touches[0].clientX; }, { passive:true });
+stage.addEventListener('touchend', e => {
+  if (swipeX === null) return;
+  const fark = e.changedTouches[0].clientX - swipeX;
+  swipeX = null;
+  if (Math.abs(fark) > 40) collStep(fark < 0 ? 1 : -1);
+});
+// klavye (masaüstünde test için)
+document.addEventListener('keydown', e => {
+  if (!$('#scr-collection').classList.contains('is-active')) return;
+  if (e.key === 'ArrowRight') collStep(1);
+  if (e.key === 'ArrowLeft')  collStep(-1);
+});
 
 $('#rg-prev').addEventListener('click', () => { buzz(8); renderMap(mapRegion - 1); });
 $('#rg-next').addEventListener('click', () => { buzz(8); renderMap(mapRegion + 1); });

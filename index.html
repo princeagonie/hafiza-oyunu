@@ -594,13 +594,24 @@
         <b><span id="coll-count">0</span> / 16 kart</b>
       </div>
     </header>
-    <div id="coll-grid" class="coll-grid"></div>
-    <div id="coll-detail" class="coll-detail">
-      <svg class="coll-detail-art"><use id="coll-detail-use" href="#art-foxy"></use></svg>
-      <div>
-        <b id="coll-detail-name">Bir karta dokun</b>
-        <p id="coll-detail-fact">Açtığın kartların hikâyesini burada okuyabilirsin.</p>
+    <!-- tek tek kart: oklarla veya parmakla kaydırarak gezilir -->
+    <div class="coll-stage" id="coll-stage">
+      <button id="coll-prev" class="rg-arrow" aria-label="Önceki kart"><svg class="ui"><use href="#ui-back"></use></svg></button>
+
+      <div class="coll-card" id="coll-card">
+        <span class="tint" id="coll-tint"></span>
+        <svg class="art"><use id="coll-use" href="#art-foxy"></use></svg>
+        <span class="coll-q" id="coll-q">?</span>
       </div>
+
+      <button id="coll-next" class="rg-arrow rg-flip" aria-label="Sonraki kart"><svg class="ui"><use href="#ui-back"></use></svg></button>
+    </div>
+
+    <p class="coll-pos"><b id="coll-i">1</b> <span>/ 16</span></p>
+
+    <div class="coll-info">
+      <b id="coll-name">Foxy</b>
+      <p id="coll-fact"></p>
     </div>
   </section>
 
