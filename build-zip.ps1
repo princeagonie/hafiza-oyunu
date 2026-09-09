@@ -16,14 +16,36 @@
 #  Kullanim:   powershell -ExecutionPolicy Bypass -File build-zip.ps1
 # =====================================================================
 param(
-  [string]$Version = (Get-Date -Format 'yyMMddHHmm')
+  [string]$Version = (Get-Date -Format 'yyMMddHHmm'),
+
+  # -NoAds : GameMonetize SDK'sini devre disi birakir (GAME_ID bosaltilir).
+  #          GameFlare, GamePix gibi KENDI reklamini basan portallara
+  #          yuklerken ZORUNLU: iki reklam agini ayni anda calistirmak
+  #          politika ihlali ve dogrudan red sebebi.
+  [switch]$NoAds,
+
+  # Zip dosya adina eklenecek etiket (orn. 'gameflare')
+  [string]$Label = ''
 )
 
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $src = $PSScriptRoot
-$dst = Join-Path (Split-Path $src -Parent) ("hafiza-oyunu-{0}.zip" -f $Version)
+$ad  = if ($Label) { "hafiza-oyunu-{0}-{1}.zip" -f $Label, $Version }
+       else        { "hafiza-oyunu-{0}.zip"     -f $Version }
+$dst = Join-Path (Split-Path $src -Parent) $ad
+
+# --- reklamsiz surum icin GAME_ID'yi bosalt ---
+$adsPath = Join-Path $src 'ads.js'
+if ($NoAds) {
+  $adsSrc = [System.IO.File]::ReadAllText($adsPath, [System.Text.Encoding]::UTF8)
+  $yeni   = [regex]::Replace($adsSrc, "GAME_ID:\s*'[^']*'", "GAME_ID: ''")
+  if ($yeni -eq $adsSrc) { Write-Output "  UYARI: GAME_ID satiri bulunamadi, kontrol et!" }
+  $adsPath = Join-Path $env:TEMP ("ads-noads-{0}.js" -f $Version)
+  [System.IO.File]::WriteAllText($adsPath, $yeni, (New-Object System.Text.UTF8Encoding $false))
+  Write-Output "  (reklamsiz surum: GAME_ID bosaltildi)"
+}
 
 # --- index.html'deki kod dosyasi referanslarini surumlu adlarla degistir ---
 $html = [System.IO.File]::ReadAllText((Join-Path $src 'index.html'), [System.Text.Encoding]::UTF8)
@@ -38,7 +60,7 @@ $tmpHtml = Join-Path $env:TEMP ("index-{0}.html" -f $Version)
 $files = @(
   @{ p = $tmpHtml;                                n = 'index.html' },
   @{ p = (Join-Path $src 'style.css');            n = ('style.{0}.css' -f $Version) },
-  @{ p = (Join-Path $src 'ads.js');               n = ('ads.{0}.js'    -f $Version) },
+  @{ p = $adsPath;                                n = ('ads.{0}.js'    -f $Version) },
   @{ p = (Join-Path $src 'game.js');              n = ('game.{0}.js'   -f $Version) },
   @{ p = (Join-Path $src 'manifest.json');        n = 'manifest.json' },
   @{ p = (Join-Path $src 'sw.js');                n = 'sw.js' },
