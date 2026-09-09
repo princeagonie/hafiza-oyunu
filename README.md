@@ -11,7 +11,8 @@ Kurulum yok, derleme yok, paket yok — saf HTML + CSS + JavaScript.
 fuar-oyunu/
 ├─ index.html      Tüm ekranlar + illüstrasyon kitaplığı (SVG <symbol>)
 ├─ style.css       Tema, kart tasarımı, bölüm haritası, arka plan
-├─ game.js         Oyun mantığı, 50 bölüm, kayıt, ses, reklam kancası
+├─ game.js         Oyun mantığı, 50 bölüm, kayıt, ses
+├─ ads.js          GameMonetize reklam katmanı (GAME_ID burada)
 ├─ manifest.json   "Ana ekrana ekle" desteği (PWA)
 └─ assets/
    ├─ ulku-child.jpg          Kapak fotoğrafı (kamu malı)
@@ -67,7 +68,8 @@ Hepsi `game.js` başındaki `CONFIG` bloğunda:
 | Kart görselleri, isimleri, bilgi metinleri | `CONFIG.POOL` |
 | Yanlış eşleşmede kartların açık kalma süresi | `CONFIG.FLIP_BACK_MS` |
 | Müzik sesi | `CONFIG.MUSIC_VOLUME` |
-| Reklamlar | `CONFIG.ADS_ENABLED` |
+| Reklam sıklığı | `CONFIG.ADS_EVERY_N_LEVELS` (şu an 3) |
+| Reklam açma/kapama | `ads.js` → `GAME_ID` (boşsa reklam yok) |
 
 **Bilgi metinlerini fuara çıkmadan önce kendi kaynağınla doğrula.**
 
@@ -90,23 +92,41 @@ hiçbir tarayıcıda sessiz kalmaz.
 
 ---
 
-## İki ayrı sürüm: fuar ve web
+## Reklamlar
 
-`game.js` içinde tek satır:
+Ağ: **GameMonetize**. Entegrasyon hazır — `ads.js` içindeki tek satır:
 
 ```js
-ADS_ENABLED: false,   // fuar sürümü  → reklam yok
-ADS_ENABLED: true,    // web sürümü   → reklam açık
+GAME_ID: '',   // GameMonetize'dan gelen 32 haneli ID buraya
 ```
 
-**Fuarda reklam gösterme.** Standda oynayan ziyaretçiye interstitial
-reklam çıkarmak kötü görünür ve birkaç yüz oynanmadan gelen gelir
-zaten sıfıra yakındır. Reklam, fuardan sonra QR ile oynamaya devam eden
-kullanıcılar için anlamlı.
+**Boşken reklam katmanı tamamen kapalıdır.** Yani fuar sürümü için ayrıca
+bir şey yapmana gerek yok; ID'yi fuardan sonra eklersin.
 
-Reklam SDK'sı bağlanacağı yer: `game.js` → `adMaybe()` fonksiyonu.
-Önerilen ağ: GameMonetize veya GameDistribution (kendi sitene reklam
-koymana izin verirler, trafik şartı yoktur).
+Sıralama önemli: GameMonetize oyunu kaydederken çalışan bir URL ister.
+Önce yayınla → sonra kaydol → ID'yi yapıştır → tekrar gönder.
+
+Kurulu güvenlik önlemleri:
+
+| Ayar | Değer | Neden |
+|------|-------|-------|
+| `TIMEOUT_MS` | 8000 | Reklam cevap vermezse oyun kilitlenmesin (fuarda kritik) |
+| `MIN_GAP_S` | 45 | İki reklam arası en az 45 saniye |
+| `CHILD_DIRECTED` | `true` | Çocuk içeriği bildirimi |
+
+### Çocuk oyunu olması gelirini etkiler
+
+AB'de **DSA 28. madde**, reşit olmayanlara profil bazlı hedefli reklamı
+yasaklar. Oyun yalnızca **kişiselleştirilmemiş** reklam alabilir; bu reklam
+başına geliri kabaca yarıya indirir. Ağın panelinde oyunu "child-directed"
+işaretlemeyi unutma.
+
+Kaba tahmin: 1000 tam oynayış ≈ 15–20 bin gösterim ≈ **$20–60**.
+GameMonetize'ın çekim eşiği $30, ödeme Net30.
+
+**Fuarda reklamı kapalı tutmayı düşün.** Standda oynayan ziyaretçiye reklam
+çıkarmak kötü görünür; birkaç yüz oynanmadan gelen gelir zaten sıfıra yakın.
+Reklamın asıl anlamı, fuardan sonra QR ile oynamaya devam edenlerde.
 
 ---
 
@@ -114,21 +134,17 @@ koymana izin verirler, trafik şartı yoktur).
 
 ### Seçenek A — GitHub Pages (kalıcı, temiz URL, ücretsiz)
 
-1. github.com'da yeni bir **public** repo aç (örn. `hafiza-oyunu`).
+Git deposu ve uzak adres HAZIR. Kalan iki adım:
+
+1. github.com/new → repo adı `hafiza-oyunu`, **Public**, hiçbir kutuyu işaretleme, Create.
 2. Bu klasörde:
 
 ```bash
-git init && git add . && git commit -m "Hafiza oyunu"
+git push -u origin main
 ```
 
-3. Uzak adresi ekleyip gönder :
-
-```bash
-git remote add origin https://github.com/gezicienes/hafiza-oyunu.git && git branch -M main && git push -u origin main
-```
-
-4. Repo → **Settings → Pages → Source: Deploy from a branch → main / (root)**.
-5. 1–2 dakika sonra adres: `https://gezicienes.github.io/hafiza-oyunu/`
+3. Repo → **Settings → Pages → Source: Deploy from a branch → main / (root)** → Save.
+4. 1–2 dakika sonra adres: `https://gezicienes.github.io/hafiza-oyunu/`
 
 ### Seçenek B — itch.io (en hızlı, git gerekmez)
 
@@ -150,4 +166,4 @@ indir ve fuar afişine bas. **Fuar öncesi gerçek bir telefonla mutlaka test et
 
 Atatürk'ün fotoğrafı yalnızca **kapakta** ve ağırbaşlı biçimde kullanılır;
 oyun kartlarında portresi yer almaz. Kartlarda onunla özdeşleşen simgeler
-(Bandırma Vapuru, kalpak, Anıtkabir, yeni harfler, tren, bayrak) kullanılır.
+(Bandırma Vapuru, 1923 madalyası, Anıtkabir, yeni harfler, tren, bayrak) kullanılır.
