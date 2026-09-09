@@ -89,6 +89,36 @@ function starThresholds(pairs){
   return { three: pairs + Math.ceil(pairs * 0.6), two: pairs + Math.ceil(pairs * 1.6) };
 }
 
+/* Kart açma ilerlemesi.
+   Oyun 4 kartla başlar, ilerledikçe havuzdaki 16 kartın hepsi açılır.
+   Amaç: her birkaç bölümde bir "yeni bir şey" olması — çocuğun
+   devam etmesi için en güçlü sebep bu. Kartlar POOL sırasıyla açılır. */
+const BASE_CARDS = 4;
+const LEVELS_PER_CARD = 3.8;
+
+function unlockedCardCount(level){
+  const n = BASE_CARDS + Math.floor((level - 1) / LEVELS_PER_CARD);
+  return Math.min(CONFIG.POOL.length, Math.max(BASE_CARDS, n));
+}
+
+// Bu bölümden sonra yeni kart açılıyorsa o kartı döndürür, yoksa null
+function cardUnlockedAfter(level){
+  if (level >= CONFIG.LEVELS) return null;
+  const before = unlockedCardCount(level);
+  const after  = unlockedCardCount(level + 1);
+  return after > before ? CONFIG.POOL[after - 1] : null;
+}
+
+// Bir sonraki yeni kart kaç bölüm sonra?
+function levelsToNextCard(level){
+  const now = unlockedCardCount(level);
+  if (now >= CONFIG.POOL.length) return 0;
+  for (let n = level + 1; n <= CONFIG.LEVELS; n++){
+    if (unlockedCardCount(n) > now) return n - level;
+  }
+  return 0;
+}
+
 /* ---------------------------------------------------------
    Yardımcılar
    --------------------------------------------------------- */
@@ -290,6 +320,47 @@ function renderMap(){
 }
 
 /* ---------------------------------------------------------
+   KOLEKSİYON
+   Açılmış kartlar toplanır; kilitliler "?" olarak görünür.
+   Bir karta dokununca hikâyesi altta belirir.
+   --------------------------------------------------------- */
+function renderCollection(){
+  const acik = unlockedCardCount(save.unlocked);
+  const grid = $('#coll-grid');
+  grid.innerHTML = '';
+
+  CONFIG.POOL.forEach((c, i) => {
+    const locked = i >= acik;
+    const b = document.createElement('button');
+    b.className = 'coll-item' + (locked ? ' locked' : '');
+    b.type = 'button';
+    b.setAttribute('aria-label', locked ? 'Kilitli kart' : c.name);
+    b.innerHTML = '<span class="tint" style="--tint:' + c.tint + '"></span>' +
+                  '<svg class="art"><use href="' + c.art + '"></use></svg>';
+    b.addEventListener('click', () => {
+      $$('.coll-item').forEach(x => x.classList.remove('sel'));
+      b.classList.add('sel');
+      if (locked){
+        $('#coll-detail-use').setAttribute('href', '#ui-lock');
+        $('#coll-detail-name').textContent = 'Henüz kilitli';
+        $('#coll-detail-fact').textContent = 'Bölümleri geçtikçe yeni kartlar açılır.';
+      } else {
+        $('#coll-detail-use').setAttribute('href', c.art);
+        $('#coll-detail-name').textContent = c.name;
+        $('#coll-detail-fact').textContent = c.fact;
+      }
+      beep(600, 0.04, 'sine', 0.07);
+    });
+    grid.appendChild(b);
+  });
+
+  $('#coll-count').textContent = acik;
+  $('#coll-detail-use').setAttribute('href', '#art-foxy');
+  $('#coll-detail-name').textContent = 'Bir karta dokun';
+  $('#coll-detail-fact').textContent = 'Açtığın kartların hikâyesini burada okuyabilirsin.';
+}
+
+/* ---------------------------------------------------------
    TAHTA
    --------------------------------------------------------- */
 function faceFront(c){
@@ -359,17 +430,22 @@ function onFlip(btn, card){
   if (a.card.id === b.card.id){
     state.open = [];
     state.matched++;
+    state.combo++;
     setTimeout(() => {
       a.btn.classList.add('is-done'); b.btn.classList.add('is-done');
       a.btn.disabled = true;          b.btn.disabled = true;
       sndMatch();
-      confetti(12);
-      showTip(pick(CONFIG.CHEERS) + ' ' + a.card.name);
+      // Seri arttıkça kutlama büyür
+      confetti(10 + state.combo * 6);
+      showTip(state.combo >= 2
+        ? state.combo + ' SERİ! ' + a.card.name
+        : pick(CONFIG.CHEERS) + ' ' + a.card.name);
       updateHud();
       if (state.matched === state.spec.pairs) setTimeout(finishLevel, 700);
     }, 250);
   } else {
     state.locked = true;
+    state.combo = 0;
     sndWrong();
     setTimeout(() => { a.btn.classList.add('is-wrong'); b.btn.classList.add('is-wrong'); }, 220);
     setTimeout(() => {
@@ -389,8 +465,11 @@ function onFlip(btn, card){
 function startLevel(n){
   state.level   = n;
   state.spec    = levelSpec(n);
-  // Bölümün kart seti sabit (aynı bölüm hep aynı kartlar), dizilim rastgele
-  state.set     = shuffle(CONFIG.POOL.slice(), seeded(n)).slice(0, state.spec.pairs);
+  state.combo   = 0;
+  // Bölümün kart seti sabit (aynı bölüm hep aynı kartlar), dizilim rastgele.
+  // Yalnızca o bölüme kadar AÇILMIŞ kartlardan seçilir.
+  const havuz   = CONFIG.POOL.slice(0, unlockedCardCount(n));
+  state.set     = shuffle(havuz, seeded(n)).slice(0, state.spec.pairs);
   state.deck    = shuffle(state.set.concat(state.set));
   state.open    = [];
   state.matched = 0;
@@ -428,9 +507,32 @@ function finishLevel(){
   $('#win-moves').textContent = state.moves;
   $$('#win-stars .star').forEach((s, i) => s.classList.toggle('on', i < stars));
 
-  const f = pick(state.set);
-  $('#fact-text').textContent = f.fact;
-  $('#fact-use').setAttribute('href', f.art);
+  // Yeni kart açıldı mı?
+  const yeni = cardUnlockedAfter(state.level);
+  const nc = $('#new-card');
+  if (yeni){
+    nc.hidden = false;
+    $('#new-card-use').setAttribute('href', yeni.art);
+    $('#new-card-name').textContent = yeni.name;
+    $('#fact-text').textContent = yeni.fact;
+    $('#fact-use').setAttribute('href', yeni.art);
+    confetti(40);
+  } else {
+    nc.hidden = true;
+    const f = pick(state.set);
+    $('#fact-text').textContent = f.fact;
+    $('#fact-use').setAttribute('href', f.art);
+  }
+
+  // "Sonraki kart X bölüm sonra" — devam etmek için ileriye dönük sebep
+  const kalan = levelsToNextCard(state.level + (yeni ? 1 : 0));
+  const nu = $('#next-unlock');
+  if (kalan > 0 && state.level < CONFIG.LEVELS){
+    nu.hidden = false;
+    nu.innerHTML = 'Sonraki yeni kart: <b>' + kalan + ' bölüm</b> sonra';
+  } else {
+    nu.hidden = true;
+  }
 
   const last = state.level >= CONFIG.LEVELS;
   $('#btn-next').textContent = last ? 'Bitir' : 'Sonraki Bölüm';
@@ -460,7 +562,8 @@ function refreshStart(){
   const line = $('#best-line');
   if (done){
     line.hidden = false;
-    line.innerHTML = 'Toplam yıldız: <b>' + totalStars() + '</b> / ' + (CONFIG.LEVELS * 3);
+    line.innerHTML = 'Toplam yıldız: <b>' + totalStars() + '</b> / ' + (CONFIG.LEVELS * 3) +
+                     ' &middot; Kart: <b>' + unlockedCardCount(save.unlocked) + '</b>/' + CONFIG.POOL.length;
   } else {
     line.hidden = true;
   }
@@ -483,6 +586,12 @@ $('#btn-play').addEventListener('click', () => {
 $('#btn-continue').addEventListener('click', () => {
   SFX.musicOn();
   startLevel(save.unlocked);
+});
+
+$('#btn-collection').addEventListener('click', () => {
+  beep(560, 0.05, 'sine');
+  renderCollection();
+  showScreen('scr-collection');
 });
 
 $('#btn-next').addEventListener('click', nextLevel);

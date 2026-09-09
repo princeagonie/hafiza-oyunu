@@ -216,6 +216,59 @@ h1 span{color:var(--red)}
 .lvl-lock{width:15px; height:15px; opacity:.7}
 
 /* =========================================================
+   KOLEKSİYON
+   ========================================================= */
+.coll-grid{
+  flex:1; min-height:0;
+  display:grid; grid-template-columns:repeat(4, 1fr); grid-template-rows:repeat(4, 1fr);
+  gap:8px; margin-bottom:12px;
+}
+.coll-item{
+  position:relative; border:0; padding:6%; cursor:pointer;
+  border-radius:var(--r-md); background:var(--card);
+  display:grid; place-items:center;
+  box-shadow:0 3px 0 var(--paper-3);
+  transition:transform .09s ease, box-shadow .09s ease;
+}
+.coll-item:active{transform:translateY(3px); box-shadow:none}
+.coll-item .tint{position:absolute; width:78%; aspect-ratio:1; border-radius:50%; background:var(--tint,#F1E2C6)}
+.coll-item .art{position:relative; width:86%; height:86%}
+.coll-item.locked{background:rgba(231,211,176,.55); box-shadow:none}
+.coll-item.locked .art{filter:grayscale(1) brightness(.5) opacity(.28)}
+.coll-item.locked .tint{display:none}
+.coll-item.locked::after{
+  content:"?"; position:absolute; font-family:var(--font-display); font-weight:600;
+  font-size:21px; color:var(--ink-3);
+}
+.coll-item.sel{box-shadow:0 0 0 3px var(--gold), 0 3px 0 var(--paper-3)}
+
+.coll-detail{
+  flex:0 0 auto; display:flex; gap:12px; align-items:center;
+  background:var(--card); border-radius:var(--r-lg); padding:13px;
+  box-shadow:0 4px 0 var(--paper-3);
+}
+.coll-detail-art{width:46px; height:46px; flex:0 0 46px}
+.coll-detail b{display:block; font-family:var(--font-display); font-weight:600; font-size:15px; color:var(--red)}
+.coll-detail p{margin:3px 0 0; font-size:12.5px; line-height:1.5; color:var(--ink-2)}
+
+/* ---------- yeni kart bildirimi ---------- */
+.newcard{
+  display:flex; gap:11px; align-items:center; text-align:left;
+  margin:14px 0 0; padding:12px;
+  background:linear-gradient(180deg,#FFF6DF,#FFEFC8);
+  border-radius:var(--r-md); box-shadow:inset 3px 0 0 var(--gold);
+  animation:pop .5s ease both;
+}
+.newcard-art{width:44px; height:44px; flex:0 0 44px; animation:bob 2.2s ease-in-out infinite}
+.newcard-k{font-size:8.5px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color:var(--gold)}
+.newcard b{display:block; font-family:var(--font-display); font-weight:600; font-size:16px; color:var(--ink)}
+
+.next-unlock{
+  margin:11px 0 0; font-size:11.5px; font-weight:800; color:var(--ink-3);
+}
+.next-unlock b{color:var(--red)}
+
+/* =========================================================
    OYUN TAHTASI
    ========================================================= */
 .board{
