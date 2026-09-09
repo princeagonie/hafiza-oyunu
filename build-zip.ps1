@@ -41,6 +41,7 @@ $files = @(
   @{ p = (Join-Path $src 'ads.js');               n = ('ads.{0}.js'    -f $Version) },
   @{ p = (Join-Path $src 'game.js');              n = ('game.{0}.js'   -f $Version) },
   @{ p = (Join-Path $src 'manifest.json');        n = 'manifest.json' },
+  @{ p = (Join-Path $src 'sw.js');                n = 'sw.js' },
   @{ p = (Join-Path $src 'assets\ulku-child.jpg');    n = 'assets/ulku-child.jpg' },
   @{ p = (Join-Path $src 'assets\sfx\flip.ogg');      n = 'assets/sfx/flip.ogg' },
   @{ p = (Join-Path $src 'assets\sfx\match.ogg');     n = 'assets/sfx/match.ogg' },

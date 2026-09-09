@@ -772,5 +772,15 @@
 
 <script src="ads.js"></script>
 <script src="game.js"></script>
+
+<!-- Çevrimdışı desteği: ilk açılıştan sonra oyun internetsiz de çalışır.
+     Kayıt başarısız olursa (eski tarayıcı, http) sessizce yok sayılır. -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
 </body>
 </html>
