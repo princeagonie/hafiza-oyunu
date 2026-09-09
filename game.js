@@ -142,6 +142,16 @@ function levelsToNextCard(level){
 const $  = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
+/* Güvenli olay bağlama.
+   Eksik bir öğe yüzünden sonraki BÜTÜN bağlantıların kopmasını engeller.
+   (Bir CDN eski game.js ile yeni index.html'i eşleştirdiğinde tam olarak
+   bu oluyordu: tek bir hata bütün butonları ölü bırakıyordu.) */
+function on(sel, ev, fn, opt){
+  const el = typeof sel === 'string' ? $(sel) : sel;
+  if (el) el.addEventListener(ev, fn, opt);
+  else console.warn('Öğe bulunamadı, olay bağlanmadı:', sel);
+}
+
 function showScreen(id){
   $$('.screen').forEach(s => s.classList.toggle('is-active', s.id === id));
   document.body.classList.toggle('in-game', id === 'scr-game');
@@ -769,29 +779,28 @@ function updateSoundBtn(){
 /* ---------------------------------------------------------
    Bağlantılar
    --------------------------------------------------------- */
-$('#btn-play').addEventListener('click', () => {
+on('#btn-play', 'click', () => {
   beep(560, 0.05, 'sine');            // sesi ilk dokunuşta uyandır
   SFX.musicOn();
   renderMap(regionOf(save.unlocked));
   showScreen('scr-map');
 });
 
-$('#btn-continue').addEventListener('click', () => {
+on('#btn-continue', 'click', () => {
   SFX.musicOn();
   startLevel(save.unlocked);
 });
 
-$('#btn-hint').addEventListener('click', useHint);
+on('#btn-hint', 'click', useHint);
 
 /* ---------- koleksiyonda gezinme ---------- */
-$('#coll-prev').addEventListener('click', () => collStep(-1));
-$('#coll-next').addEventListener('click', () => collStep(1));
+on('#coll-prev', 'click', () => collStep(-1));
+on('#coll-next', 'click', () => collStep(1));
 
 // parmakla kaydırma
 let swipeX = null;
-const stage = $('#coll-stage');
-stage.addEventListener('touchstart', e => { swipeX = e.touches[0].clientX; }, { passive:true });
-stage.addEventListener('touchend', e => {
+on('#coll-stage', 'touchstart', e => { swipeX = e.touches[0].clientX; }, { passive:true });
+on('#coll-stage', 'touchend', e => {
   if (swipeX === null) return;
   const fark = e.changedTouches[0].clientX - swipeX;
   swipeX = null;
@@ -804,11 +813,11 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft')  collStep(-1);
 });
 
-$('#rg-prev').addEventListener('click', () => { buzz(8); renderMap(mapRegion - 1); });
-$('#rg-next').addEventListener('click', () => { buzz(8); renderMap(mapRegion + 1); });
+on('#rg-prev', 'click', () => { buzz(8); renderMap(mapRegion - 1); });
+on('#rg-next', 'click', () => { buzz(8); renderMap(mapRegion + 1); });
 
 /* ---------- sertifika ---------- */
-$('#btn-cert').addEventListener('click', () => {
+on('#btn-cert', 'click', () => {
   $('#cert-ask').hidden   = false;
   $('#cert-paper').hidden = true;
   $('#cert-hint').hidden  = true;
@@ -818,7 +827,7 @@ $('#btn-cert').addEventListener('click', () => {
   setTimeout(() => $('#cert-name').focus(), 250);
 });
 
-$('#btn-cert-make').addEventListener('click', () => {
+on('#btn-cert-make', 'click', () => {
   const ad = ($('#cert-name').value || '').trim();
   if (!ad){ $('#cert-name').focus(); buzz(50); return; }
 
@@ -840,27 +849,27 @@ $('#btn-cert-make').addEventListener('click', () => {
   confetti(120);
 });
 
-$('#btn-cert-back').addEventListener('click', () => {
+on('#btn-cert-back', 'click', () => {
   renderMap(regionOf(save.unlocked));
   showScreen('scr-map');
 });
 
-$('#btn-collection').addEventListener('click', () => {
+on('#btn-collection', 'click', () => {
   beep(560, 0.05, 'sine');
   renderCollection();
   showScreen('scr-collection');
 });
 
-$('#btn-next').addEventListener('click', nextLevel);
-$('#btn-retry').addEventListener('click', () => startLevel(state.level));
+on('#btn-next', 'click', nextLevel);
+on('#btn-retry', 'click', () => startLevel(state.level));
 
-$('#btn-quit').addEventListener('click', () => {
+on('#btn-quit', 'click', () => {
   clearInterval(state.timer);
   renderMap(regionOf(state.level));
   showScreen('scr-map');
 });
 
-$('#btn-sound').addEventListener('click', () => {
+on('#btn-sound', 'click', () => {
   save.sound = !save.sound;
   persist();
   updateSoundBtn();
