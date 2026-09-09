@@ -67,7 +67,24 @@ const CONFIG = {
       fact:'Kapadokya’da peribacalarının üzerinde her sabah yüzlerce balon uçar.' }
   ],
 
-  CHEERS: ['Harika!', 'Süper!', 'Aferin!', 'Buldun!', 'Çok iyi!', 'Bravo!', 'Muhteşem!']
+  CHEERS: ['Harika!', 'Süper!', 'Aferin!', 'Buldun!', 'Çok iyi!', 'Bravo!', 'Muhteşem!'],
+
+  /* Bölgeler — her biri 10 bölüm. Haritada tek tek sayfalanır,
+     böylece 50 bölüm bir liste değil, bir yolculuk gibi görünür. */
+  REGIONS: [
+    { ad:'Kurtuluş',   renk:'#C4161C' },
+    { ad:'Cumhuriyet', renk:'#C98A18' },
+    { ad:'İzmir',      renk:'#1F8E84' },
+    { ad:'Anadolu',    renk:'#B5651D' },
+    { ad:'Çocuklar',   renk:'#CE4468' }
+  ],
+
+  // Bu bölümlerde oyun başında kartlar kısa süre açık gösterilir
+  PEEK_EVERY: 5,
+  PEEK_SECONDS: 3,
+
+  // Her bölümde kaç bedava ipucu
+  FREE_HINTS: 1
 };
 
 /* ---------------------------------------------------------
@@ -132,6 +149,15 @@ function showScreen(id){
 }
 function fmtTime(sec){ return Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0'); }
 function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function regionOf(level){ return Math.min(CONFIG.REGIONS.length - 1, Math.floor((level - 1) / 10)); }
+function isPeekLevel(level){ return level % CONFIG.PEEK_EVERY === 0; }
+
+/* Kısa titreşim. Desteklemeyen cihazda sessizce yok sayılır.
+   Mobilde oyunun "gerçek" hissettirmesini en çok bu sağlıyor. */
+function buzz(ms){
+  if (!save.sound) return;                 // ses kapalıysa titreşim de kapalı
+  try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e){}
+}
 
 function shuffle(arr, rnd){
   const r = rnd || Math.random;
@@ -151,7 +177,7 @@ function seeded(seed){
    İlerleme kaydı
    --------------------------------------------------------- */
 const SAVE_KEY = 'ataturk-hafiza:v1';
-let save = { stars:{}, unlocked:1, sound:true };
+let save = { stars:{}, unlocked:1, sound:true, name:'' };
 
 function loadSave(){
   try {
@@ -292,30 +318,76 @@ const state = {
 /* ---------------------------------------------------------
    BÖLÜM HARİTASI
    --------------------------------------------------------- */
-function renderMap(){
+let mapRegion = 0;
+
+function renderMap(region){
+  if (typeof region === 'number') mapRegion = region;
+  mapRegion = Math.max(0, Math.min(CONFIG.REGIONS.length - 1, mapRegion));
+
+  const rg   = CONFIG.REGIONS[mapRegion];
+  const scr  = $('#scr-map');
+  scr.style.setProperty('--rg', rg.renk);
+  $('#rg-name').textContent  = rg.ad;
+  $('#rg-index').textContent = 'Bölge ' + (mapRegion + 1) + ' / ' + CONFIG.REGIONS.length;
+  $('#rg-prev').disabled = mapRegion === 0;
+  $('#rg-next').disabled = mapRegion === CONFIG.REGIONS.length - 1;
+
+  // bölge noktaları
+  const dots = $('#rg-dots');
+  dots.innerHTML = '';
+  CONFIG.REGIONS.forEach((_, i) => {
+    const d = document.createElement('span');
+    d.className = 'rg-dot' + (i === mapRegion ? ' on' : '');
+    dots.appendChild(d);
+  });
+
+  // bu bölgenin 10 bölümü
   const box = $('#levels');
   box.innerHTML = '';
-  for (let n = 1; n <= CONFIG.LEVELS; n++){
-    const stars = save.stars[n] || 0;
+  const ilk = mapRegion * 10 + 1;
+  for (let n = ilk; n < ilk + 10; n++){
+    const stars  = save.stars[n] || 0;
     const locked = n > save.unlocked;
 
     const b = document.createElement('button');
-    b.className = 'lvl' + (locked ? ' locked' : '') + (stars ? ' done' : '');
+    b.className = 'lvl' + (locked ? ' locked' : '') + (stars ? ' done' : '') +
+                  (n === save.unlocked && !stars ? ' next' : '');
     b.type = 'button';
     b.disabled = locked;
+    b.style.animationDelay = ((n - ilk) * 28) + 'ms';
     b.setAttribute('aria-label', 'Bölüm ' + n + (locked ? ' (kilitli)' : ''));
 
-    let dots = '';
+    let yildiz = '';
     for (let i = 0; i < 3; i++){
-      dots += '<svg class="lvl-star' + (i < stars ? ' on' : '') + '"><use href="#art-star"></use></svg>';
+      yildiz += '<svg class="lvl-star' + (i < stars ? ' on' : '') + '"><use href="#art-star"></use></svg>';
     }
     b.innerHTML = locked
       ? '<svg class="lvl-lock"><use href="#ui-lock"></use></svg>'
-      : '<span class="lvl-n">' + n + '</span><span class="lvl-stars">' + dots + '</span>';
+      : '<span class="lvl-n">' + n + '</span><span class="lvl-stars">' + yildiz + '</span>';
 
-    if (!locked) b.addEventListener('click', () => startLevel(n));
+    if (!locked) b.addEventListener('click', () => { buzz(12); startLevel(n); });
     box.appendChild(b);
   }
+
+  // bölge ilerlemesi
+  let biten = 0;
+  for (let n = ilk; n < ilk + 10; n++) if (save.stars[n]) biten++;
+  $('#rg-done').textContent = biten + ' / 10';
+  $('#rg-fill').style.width = (biten * 10) + '%';
+
+  // bu bölgede açılan kartlar
+  const kutu = $('#rg-cards');
+  kutu.innerHTML = '';
+  const acikSayi = unlockedCardCount(save.unlocked);
+  CONFIG.POOL.slice(mapRegion * 3, mapRegion * 3 + 4).forEach(c => {
+    const i = CONFIG.POOL.indexOf(c);
+    const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('viewBox', '0 0 100 100');
+    if (i >= acikSayi) s.setAttribute('class', 'kilit');
+    s.innerHTML = '<use href="' + c.art + '"></use>';
+    kutu.appendChild(s);
+  });
+
   $('#total-stars').textContent = totalStars();
 }
 
@@ -375,10 +447,12 @@ function renderBoard(){
   board.dataset.cols = state.spec.cols;
   board.classList.toggle('dense', state.deck.length >= 16);
 
-  state.deck.forEach(c => {
+  state.deck.forEach((c, i) => {
     const btn = document.createElement('button');
     btn.className = 'card';
     btn.type = 'button';
+    // Kartlar aynı anda değil, dalga halinde diziliyor
+    btn.style.animationDelay = (i * 32) + 'ms';
     btn.setAttribute('aria-label', 'Kapalı kart');
     btn.innerHTML =
       '<div class="card-inner">' +
@@ -391,9 +465,98 @@ function renderBoard(){
 }
 
 function updateHud(){
+  const hedef = starThresholds(state.spec.pairs).three;
   $('#hud-level').textContent = state.level;
-  $('#hud-time').textContent  = fmtTime(state.seconds);
+  // Hamle sayacı 3 yıldız bütçesini gösterir — hedef görünür olunca
+  // çocuk tekrar oynamak istiyor.
+  $('#hud-moves').textContent = state.moves + '/' + hedef;
+  $('#hud-moves').style.color = state.moves > hedef ? 'var(--ink-3)' : '';
   $('#hud-pairs').textContent = state.matched + '/' + state.spec.pairs;
+}
+
+function updateHintBtn(){
+  const b = $('#btn-hint');
+  const reklamVar = window.ADS && window.ADS.enabled();
+  if (state.hints > 0){
+    b.disabled = false;
+    b.classList.remove('ad');
+    $('#hint-badge').textContent = state.hints;
+    b.setAttribute('aria-label', 'İpucu (' + state.hints + ' hakkın var)');
+  } else if (reklamVar){
+    b.disabled = false;
+    b.classList.add('ad');
+    $('#hint-badge').textContent = 'AD';
+    b.setAttribute('aria-label', 'Reklam izleyip ipucu al');
+  } else {
+    b.disabled = true;
+    b.classList.remove('ad');
+    $('#hint-badge').textContent = '0';
+  }
+}
+
+/* İpucu: eşleşmemiş kartları kısa süre gösterir. */
+function revealCards(ms){
+  if (state.locked) return;
+  state.locked = true;
+  const acilan = $$('.card:not(.is-done):not(.is-open)');
+  acilan.forEach(c => c.classList.add('is-open', 'peeking'));
+  setTimeout(() => {
+    acilan.forEach(c => c.classList.remove('is-open', 'peeking'));
+    state.locked = false;
+  }, ms);
+}
+
+function useHint(){
+  if (state.locked) return;
+  if (state.hints > 0){
+    state.hints--;
+    updateHintBtn();
+    buzz(20);
+    beep(880, 0.08, 'sine');
+    revealCards(1400);
+    return;
+  }
+  if (window.ADS && window.ADS.enabled()){
+    SFX.musicOff();
+    window.ADS.rewarded().then(odul => {
+      SFX.musicOn();
+      if (odul){
+        buzz(20);
+        revealCards(1400);
+      } else {
+        showTip('Reklam yüklenemedi');
+      }
+    });
+  }
+}
+
+/* Ezberleme anı: bazı bölümlerde başta tüm kartlar açık gösterilir. */
+function runPeek(done){
+  const kutu = $('#peek');
+  const sayi = $('#peek-n');
+  let kalan = CONFIG.PEEK_SECONDS;
+
+  state.locked = true;
+  $$('.card').forEach(c => c.classList.add('is-open', 'peeking'));
+  kutu.hidden = false;
+  sayi.textContent = kalan;
+  beep(700, 0.1, 'sine');
+
+  const t = setInterval(() => {
+    kalan--;
+    if (kalan > 0){
+      sayi.textContent = kalan;
+      beep(700, 0.08, 'sine');
+      buzz(10);
+    } else {
+      clearInterval(t);
+      kutu.hidden = true;
+      $$('.card').forEach(c => c.classList.remove('is-open', 'peeking'));
+      state.locked = false;
+      beep(420, 0.12, 'triangle');
+      done();
+    }
+  }, 1000);
 }
 
 let tipTimer = null;
@@ -409,7 +572,8 @@ function startTimer(){
   clearInterval(state.timer);
   state.timer = setInterval(() => {
     state.seconds++;
-    $('#hud-time').textContent = fmtTime(state.seconds);
+    // Süre üst barda gösterilmiyor (yerini 3 yıldız hamle bütçesi aldı),
+    // ama ölçülmeye devam ediyor; bölüm sonunda gösteriliyor.
   }, 1000);
 }
 
@@ -421,6 +585,7 @@ function onFlip(btn, card){
   btn.setAttribute('aria-label', 'Açık kart: ' + card.name);
   state.open.push({ btn: btn, card: card });
   sndFlip();
+  buzz(10);
 
   if (state.open.length < 2) return;
 
@@ -435,6 +600,7 @@ function onFlip(btn, card){
       a.btn.classList.add('is-done'); b.btn.classList.add('is-done');
       a.btn.disabled = true;          b.btn.disabled = true;
       sndMatch();
+      buzz(state.combo >= 3 ? [18,40,18] : 26);
       // Seri arttıkça kutlama büyür
       confetti(10 + state.combo * 6);
       showTip(state.combo >= 2
@@ -447,6 +613,7 @@ function onFlip(btn, card){
     state.locked = true;
     state.combo = 0;
     sndWrong();
+    buzz(55);
     setTimeout(() => { a.btn.classList.add('is-wrong'); b.btn.classList.add('is-wrong'); }, 220);
     setTimeout(() => {
       [a, b].forEach(x => {
@@ -477,18 +644,26 @@ function startLevel(n){
   state.seconds = 0;
   state.locked  = false;
 
+  state.hints = CONFIG.FREE_HINTS;
+
   clearInterval(state.timer);
   $('#tip').classList.remove('show');
+  $('#peek').hidden = true;
   renderBoard();
   updateHud();
+  updateHintBtn();
   showScreen('scr-game');
-  startTimer();
   SFX.musicOn();
+
+  // Ezberleme bölümüyse önce kartları göster, sonra sayacı başlat
+  if (isPeekLevel(n)) runPeek(startTimer);
+  else startTimer();
 }
 
 function finishLevel(){
   clearInterval(state.timer);
   sndLevel();
+  buzz([25,60,25,60,90]);
   confetti(90);
 
   const t = starThresholds(state.spec.pairs);
@@ -579,13 +754,56 @@ function updateSoundBtn(){
 $('#btn-play').addEventListener('click', () => {
   beep(560, 0.05, 'sine');            // sesi ilk dokunuşta uyandır
   SFX.musicOn();
-  renderMap();
+  renderMap(regionOf(save.unlocked));
   showScreen('scr-map');
 });
 
 $('#btn-continue').addEventListener('click', () => {
   SFX.musicOn();
   startLevel(save.unlocked);
+});
+
+$('#btn-hint').addEventListener('click', useHint);
+
+$('#rg-prev').addEventListener('click', () => { buzz(8); renderMap(mapRegion - 1); });
+$('#rg-next').addEventListener('click', () => { buzz(8); renderMap(mapRegion + 1); });
+
+/* ---------- sertifika ---------- */
+$('#btn-cert').addEventListener('click', () => {
+  $('#cert-ask').hidden   = false;
+  $('#cert-paper').hidden = true;
+  $('#cert-hint').hidden  = true;
+  $('#btn-cert-back').hidden = true;
+  $('#cert-name').value = save.name || '';
+  showScreen('scr-cert');
+  setTimeout(() => $('#cert-name').focus(), 250);
+});
+
+$('#btn-cert-make').addEventListener('click', () => {
+  const ad = ($('#cert-name').value || '').trim();
+  if (!ad){ $('#cert-name').focus(); buzz(50); return; }
+
+  save.name = ad;
+  persist();
+
+  $('#cert-out-name').textContent = ad;
+  $('#cert-stars').textContent = totalStars() + ' / ' + (CONFIG.LEVELS * 3) + ' yıldız';
+  $('#cert-date').textContent = new Date().toLocaleDateString('tr-TR',
+    { day:'numeric', month:'long', year:'numeric' });
+
+  $('#cert-ask').hidden   = true;
+  $('#cert-paper').hidden = false;
+  $('#cert-hint').hidden  = false;
+  $('#btn-cert-back').hidden = false;
+
+  sndLevel();
+  buzz([25,60,25,60,90]);
+  confetti(120);
+});
+
+$('#btn-cert-back').addEventListener('click', () => {
+  renderMap(regionOf(save.unlocked));
+  showScreen('scr-map');
 });
 
 $('#btn-collection').addEventListener('click', () => {
@@ -599,7 +817,7 @@ $('#btn-retry').addEventListener('click', () => startLevel(state.level));
 
 $('#btn-quit').addEventListener('click', () => {
   clearInterval(state.timer);
-  renderMap();
+  renderMap(regionOf(state.level));
   showScreen('scr-map');
 });
 
@@ -613,7 +831,7 @@ $('#btn-sound').addEventListener('click', () => {
 // data-go="ekran-id" olan bütün butonlar
 $$('[data-go]').forEach(b => b.addEventListener('click', () => {
   const target = b.dataset.go;
-  if (target === 'scr-map') renderMap();
+  if (target === 'scr-map') renderMap(regionOf(save.unlocked));
   if (target === 'scr-start') refreshStart();
   showScreen(target);
 }));

@@ -17,8 +17,9 @@
 window.ADS = (function () {
 
   const CFG = {
-    // ↓↓↓ GameMonetize'dan aldığın Game ID'yi buraya yapıştır ↓↓↓
-    GAME_ID: '',
+    // GameMonetize Game ID — "Ataturk, Ulku ve Foks"
+    // Boşaltırsan reklam katmanı tamamen devre dışı kalır (fuar sürümü için).
+    GAME_ID: 'aot3i031m3o60mzd9scv1sxbrsptjfd4',
 
     // Oyun çocuklara yönelik. Bu bayrak reklam ağına kişiselleştirilmemiş
     // reklam sunmasını bildirir. ÇOCUK OYUNLARINDA AÇIK BIRAK.
@@ -122,11 +123,47 @@ window.ADS = (function () {
     });
   }
 
+  /* Ödüllü (rewarded) reklam.
+     Oyuncu İSTEYEREK izler, karşılığında ipucu kazanır. Araya giren
+     reklamdan hem daha çok kazandırır hem de rahatsız etmez.
+     Çözülen değer: true → ödül verilebilir, false → verilmemeli. */
+  function rewarded(){
+    if (!enabled()) return Promise.resolve(false);
+    if (!ready || !window.sdk || typeof window.sdk.showBanner !== 'function'){
+      return Promise.resolve(false);
+    }
+
+    lastShown = Date.now() / 1000;
+    cover(true);
+
+    return new Promise(function (resolve) {
+      let verildi = false;
+      pending = { resolve: function(){} };
+
+      const guard = setTimeout(function () {
+        document.dispatchEvent(new CustomEvent('ads:resume'));
+        cover(false); pending = null;
+        resolve(verildi);
+      }, CFG.TIMEOUT_MS);
+
+      pending.resolve = function () {
+        clearTimeout(guard);
+        cover(false); pending = null;
+        verildi = true;
+        resolve(true);
+      };
+
+      try { window.sdk.showBanner(); }
+      catch (err) { clearTimeout(guard); cover(false); pending = null; resolve(false); }
+    });
+  }
+
   load();
 
   return {
     enabled: enabled,
     interstitial: interstitial,
+    rewarded: rewarded,
     config: CFG
   };
 })();

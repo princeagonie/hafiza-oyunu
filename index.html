@@ -485,6 +485,11 @@
     <path d="M14 38h16L52 20v60L30 62H14z" fill="currentColor"/>
     <path d="M66 38l22 22M88 38L66 60" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
   </symbol>
+  <symbol id="ui-bulb" viewBox="0 0 100 100">
+    <path d="M50 10c-15 0-26 11-26 25 0 9 5 16 10 21 3 3 4 6 4 9h24c0-3 1-6 4-9 5-5 10-12 10-21 0-14-11-25-26-25z" fill="currentColor"/>
+    <rect x="39" y="72" width="22" height="7" rx="3.5" fill="currentColor"/>
+    <rect x="42" y="82" width="16" height="7" rx="3.5" fill="currentColor"/>
+  </symbol>
   <symbol id="ui-lock" viewBox="0 0 100 100">
     <path d="M32 44V32a18 18 0 0 1 36 0v12" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round"/>
     <rect x="22" y="42" width="56" height="42" rx="11" fill="currentColor"/>
@@ -599,7 +604,7 @@
     </div>
   </section>
 
-  <!-- ================= BÖLÜM HARİTASI ================= -->
+  <!-- ================= BÖLÜM HARİTASI (bölge sayfalı) ================= -->
   <section id="scr-map" class="screen">
     <header class="hud">
       <button class="icon-btn" data-go="scr-start" aria-label="Ana menü"><svg class="ui"><use href="#ui-back"></use></svg></button>
@@ -609,7 +614,26 @@
       </div>
       <button id="btn-sound" class="icon-btn" aria-label="Sesi aç/kapat"><svg class="ui"><use id="sound-use" href="#ui-sound"></use></svg></button>
     </header>
+
+    <div class="region-bar">
+      <button id="rg-prev" class="rg-arrow" aria-label="Önceki bölge"><svg class="ui"><use href="#ui-back"></use></svg></button>
+      <div class="rg-title">
+        <span class="rg-k" id="rg-index">Bölge 1 / 5</span>
+        <b id="rg-name">Kurtuluş</b>
+      </div>
+      <button id="rg-next" class="rg-arrow rg-flip" aria-label="Sonraki bölge"><svg class="ui"><use href="#ui-back"></use></svg></button>
+    </div>
+    <div class="rg-dots" id="rg-dots"></div>
+
     <div id="levels" class="levels"></div>
+
+    <div class="rg-progress">
+      <div class="rg-progress-top">
+        <span>Bu bölgede</span><b id="rg-done">0 / 10</b>
+      </div>
+      <div class="rg-bar"><span id="rg-fill" style="width:0%"></span></div>
+      <div class="rg-cards" id="rg-cards"></div>
+    </div>
   </section>
 
   <!-- ================= OYUN ================= -->
@@ -617,11 +641,18 @@
     <header class="hud">
       <button id="btn-quit" class="icon-btn" aria-label="Haritaya dön"><svg class="ui"><use href="#ui-back"></use></svg></button>
       <div class="stat"><span class="stat-k">Bölüm</span><b id="hud-level">1</b></div>
-      <div class="stat"><span class="stat-k">Süre</span><b id="hud-time">0:00</b></div>
+      <div class="stat"><span class="stat-k">Hamle</span><b id="hud-moves">0/5</b></div>
       <div class="stat"><span class="stat-k">Eş</span><b id="hud-pairs">0/3</b></div>
+      <button id="btn-hint" class="icon-btn hint-btn" aria-label="İpucu">
+        <svg class="ui"><use href="#ui-bulb"></use></svg>
+        <span class="hint-badge" id="hint-badge">1</span>
+      </button>
     </header>
     <div id="board" class="board" role="grid" aria-label="Oyun tahtası"></div>
     <p class="tip" id="tip"></p>
+
+    <!-- Ezberleme anı sayacı -->
+    <div id="peek" class="peek" hidden><b>EZBERLE!</b><span id="peek-n">3</span></div>
   </section>
 
   <!-- ================= BÖLÜM TAMAMLANDI ================= -->
@@ -676,8 +707,47 @@
       <div class="win-stats">
         <div><span>Toplam Yıldız</span><b id="final-stars">0</b></div>
       </div>
-      <button class="btn btn-primary" data-go="scr-map">Bölümlere Dön</button>
+      <button id="btn-cert" class="btn btn-primary">Sertifikamı Al</button>
+      <button class="btn btn-ghost" data-go="scr-map">Bölümlere Dön</button>
     </div>
+  </section>
+
+  <!-- ================= SERTİFİKA ================= -->
+  <section id="scr-cert" class="screen">
+    <div id="cert-ask" class="win-card">
+      <svg class="win-foxy"><use href="#art-ulku"></use></svg>
+      <h2>Adını yaz</h2>
+      <p class="pitch">Sertifikanın üzerinde adın yazacak.</p>
+      <input id="cert-name" class="cert-input" type="text" maxlength="24"
+             placeholder="Adın ve soyadın" autocomplete="off" spellcheck="false">
+      <button id="btn-cert-make" class="btn btn-primary">Sertifikayı Oluştur</button>
+      <button class="btn btn-ghost" data-go="scr-map">Vazgeç</button>
+    </div>
+
+    <figure id="cert-paper" class="cert" hidden>
+      <div class="cert-inner">
+        <svg class="cert-crest"><use href="#art-bayrak"></use></svg>
+        <span class="cert-k">Başarı Belgesi</span>
+        <b class="cert-name" id="cert-out-name">—</b>
+        <p class="cert-body">
+          <strong>Atatürk, Ülkü ve Foxy</strong> hafıza oyununun
+          <strong>50 bölümünü</strong> tamamlayarak
+        </p>
+        <span class="cert-title">Hafıza Şampiyonu</span>
+        <p class="cert-body">unvanını kazanmıştır.</p>
+        <div class="cert-stars">
+          <svg class="mini-star"><use href="#art-star"></use></svg>
+          <span id="cert-stars">0 / 150 yıldız</span>
+        </div>
+        <div class="cert-foot">
+          <svg class="cert-pet"><use href="#art-foxy"></use></svg>
+          <span id="cert-date">—</span>
+          <svg class="cert-pet"><use href="#art-ulku"></use></svg>
+        </div>
+      </div>
+    </figure>
+    <p class="cert-hint" id="cert-hint" hidden>Ekran görüntüsü alıp saklayabilir veya paylaşabilirsin.</p>
+    <button id="btn-cert-back" class="btn btn-ghost" hidden>Bölümlere Dön</button>
   </section>
 
   <div id="confetti" aria-hidden="true"></div>
