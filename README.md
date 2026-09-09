@@ -1,4 +1,4 @@
-# Atatürk, Ülkü ve Foxy — Hafıza Oyunu
+# Atatürk, Ülkü ve Foks — Hafıza Oyunu
 
 50 bölümlük, mobil tarayıcıda çalışan çocuk hafıza oyunu (8–11 yaş).
 Kurulum yok, derleme yok, paket yok — saf HTML + CSS + JavaScript.

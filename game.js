@@ -1,5 +1,5 @@
 /* =========================================================
-   Atatürk, Ülkü ve Foxy — 50 Bölümlük Hafıza Oyunu
+   Atatürk, Ülkü ve Foks — 50 Bölümlük Hafıza Oyunu
    Bağımlılık yok. Saf JavaScript.
    ========================================================= */
 'use strict';
@@ -30,8 +30,8 @@ const CONFIG = {
      Fotoğrafa geçmek istersen karta  img:'assets/x.jpg'  ekle.
      ------------------------------------------------------- */
   POOL: [
-    { id:'foxy',       art:'#art-foxy',       tint:'#FFE3C9', name:'Foxy',
-      fact:'Foxy, Çankaya Köşkü’nde yaşayan köpekti. Ülkü’nün en yakın oyun arkadaşlarındandı.' },
+    { id:'foks',       art:'#art-foks',       tint:'#FFE3C9', name:'Foks',
+      fact:'Foks, Çankaya Köşkü’nde yaşayan köpekti. Ülkü’nün en yakın oyun arkadaşlarındandı.' },
     { id:'ulku',       art:'#art-ulku',       tint:'#FFD9E4', name:'Ülkü',
       fact:'Ülkü, Atatürk’ün manevi kızlarındandı. Çocukluğu Çankaya Köşkü’nde geçti.' },
     { id:'bayrak',     art:'#art-bayrak',     tint:'#FFD6D2', name:'Türk Bayrağı',
@@ -162,10 +162,15 @@ function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
 function regionOf(level){ return Math.min(CONFIG.REGIONS.length - 1, Math.floor((level - 1) / 10)); }
 function isPeekLevel(level){ return level % CONFIG.PEEK_EVERY === 0; }
 
+/* Reklam oynarken oyun tamamen susar (aşağıdaki ads:pause/ads:resume
+   dinleyicileri bunu çevirir). GameMonetize kuralı: reklam sırasında
+   arka planda oyun sesi çalması yasak. */
+let reklamSusturdu = false;
+
 /* Kısa titreşim. Desteklemeyen cihazda sessizce yok sayılır.
    Mobilde oyunun "gerçek" hissettirmesini en çok bu sağlıyor. */
 function buzz(ms){
-  if (!save.sound) return;                 // ses kapalıysa titreşim de kapalı
+  if (!save.sound || reklamSusturdu) return;
   try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e){}
 }
 
@@ -236,7 +241,7 @@ const SFX = {
   },
 
   play(key, fallback){
-    if (!save.sound) return;
+    if (!save.sound || reklamSusturdu) return;
     if (this.ready[key] && this.files[key]){
       try {
         const c = this.files[key].cloneNode();
@@ -260,7 +265,7 @@ const SFX = {
 /* ---- dosya yoksa devreye giren üretilmiş sesler ---- */
 let actx = null;
 function beep(freq, dur, type, vol){
-  if (!save.sound) return;
+  if (!save.sound || reklamSusturdu) return;
   try {
     if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
     if (actx.state === 'suspended') actx.resume();
@@ -313,9 +318,11 @@ function adMaybe(level){
   return window.ADS.interstitial();
 }
 
-// Reklam başlarken müziği kıs, bitince geri aç
-document.addEventListener('ads:pause',  () => SFX.musicOff());
-document.addEventListener('ads:resume', () => SFX.musicOn());
+/* Reklam sırasında oyunun TAMAMEN susması gerekiyor.
+   GameMonetize belgesi: "It is important that the game is muted, as
+   background audio through video advertisements is forbidden." */
+document.addEventListener('ads:pause',  () => { reklamSusturdu = true;  SFX.musicOff(); });
+document.addEventListener('ads:resume', () => { reklamSusturdu = false; SFX.musicOn();  });
 
 /* ---------------------------------------------------------
    Oyun durumu
@@ -779,11 +786,27 @@ function updateSoundBtn(){
 /* ---------------------------------------------------------
    Bağlantılar
    --------------------------------------------------------- */
+/* "Oyna" butonunda reklam.
+   GameMonetize belgesi reklamın çağrılmasını beklediği durumları
+   sayıyor ve ilk sırada "play button" var; SDK doğrulaması da bunu
+   arıyor. Oturumda yalnızca BİR kez gösterilir — çocuk oyununda her
+   Oyna basışında reklam çıkarmak kabul edilemez. */
+let acilisReklamiGosterildi = false;
+
 on('#btn-play', 'click', () => {
   beep(560, 0.05, 'sine');            // sesi ilk dokunuşta uyandır
-  SFX.musicOn();
-  renderMap(regionOf(save.unlocked));
-  showScreen('scr-map');
+  const haritayaGec = () => {
+    SFX.musicOn();
+    renderMap(regionOf(save.unlocked));
+    showScreen('scr-map');
+  };
+
+  if (!acilisReklamiGosterildi && window.ADS && window.ADS.enabled()){
+    acilisReklamiGosterildi = true;
+    window.ADS.interstitial().then(haritayaGec);   // reklam gelmezse de devam eder
+  } else {
+    haritayaGec();
+  }
 });
 
 on('#btn-continue', 'click', () => {

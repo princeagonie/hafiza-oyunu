@@ -12,7 +12,7 @@
    ========================================================= */
 'use strict';
 
-const SURUM  = 'v1';
+const SURUM  = 'v2';   // Foxy -> Foks adlandırması
 const ONBELLEK = 'ataturk-hafiza-' + SURUM;
 
 /* Kurulumda hemen indirilecekler.

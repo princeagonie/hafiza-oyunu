@@ -26,13 +26,11 @@ window.ADS = (function () {
        (oyun ayarları / kategori) yapman gerekir. AB'de DSA 28. madde
        gereği reşit olmayanlara profil bazlı reklam yasaktır. */
 
-    // Reklam en fazla bu kadar bekletir; süre dolarsa oyun devam eder.
-    // Fuarda takılı kalan bir reklam = ölü oyun. Bu yüzden şart.
-    TIMEOUT_MS: 8000,
-
-    // Ödüllü reklam için daha kısa: çocuk ipucu butonuna basmış,
-    // ekrana bakıp bekliyor. 8 saniye orada çok uzun.
-    REWARD_TIMEOUT_MS: 3500,
+    /* Reklamın BAŞLAMASI için tanınan süre. Bu sürede reklam
+       başlamazsa oyun serbest bırakılır — çocuk boş ekrana bakmasın.
+       Reklam başlarsa (SDK_GAME_PAUSE) bu sayaç iptal edilir, yani
+       gerçek bir reklam asla yarıda kesilmez. */
+    START_TIMEOUT_MS: 3000,
 
     // İki reklam arasında en az bu kadar süre geçsin (saniye).
     MIN_GAP_S: 45
@@ -41,7 +39,12 @@ window.ADS = (function () {
   let ready = false;
   let loading = false;
   let lastShown = 0;
-  let pending = null;      // { resolve }
+  let pending = null;      // sonucu bekleyen fonksiyon
+  let guardTimer = null;   // "reklam hiç başlamadı" sayacı
+
+  function clearGuard(){
+    if (guardTimer){ clearTimeout(guardTimer); guardTimer = null; }
+  }
 
   const enabled = () => CFG.GAME_ID.trim().length > 0;
 
@@ -61,7 +64,10 @@ window.ADS = (function () {
             ready = true;
             break;
           case 'SDK_GAME_PAUSE':
-            // Reklam başladı — oyun sesini kıs
+            /* Reklam GERÇEKTEN başladı. Zaman aşımı sayacını iptal et:
+               o sayaç "reklam hiç başlamadı" durumu için; başlamış bir
+               reklamı yarıda kesmemeli. */
+            clearGuard();
             document.dispatchEvent(new CustomEvent('ads:pause'));
             break;
           case 'SDK_GAME_START':
@@ -77,11 +83,19 @@ window.ADS = (function () {
       }
     };
 
-    const s = document.createElement('script');
-    s.async = true;
-    s.src = 'https://api.gamemonetize.com/sdk.js';
-    s.onerror = function () { ready = false; finish(); };
-    document.head.appendChild(s);
+    /* Resmî SDK belgesindeki yükleyicinin birebir aynısı:
+       ilk <script> etiketinden önce ekler ve id verir (id, çifte
+       yüklemeye karşı onların koruması). Sapma bırakmıyoruz. */
+    (function (a, b, c) {
+      var d = a.getElementsByTagName(b)[0];
+      if (!a.getElementById(c)) {
+        var e = a.createElement(b);
+        e.id = c;
+        e.src = 'https://api.gamemonetize.com/sdk.js';
+        e.onerror = function () { ready = false; settle(false); };
+        d.parentNode.insertBefore(e, d);
+      }
+    })(document, 'script', 'gamemonetize-sdk');
   }
 
   /* ---------- örtü ---------- */
@@ -94,6 +108,7 @@ window.ADS = (function () {
      ok = true  → reklam gerçekten baştan sona gösterildi
      ok = false → hata, doluluk yok veya zaman aşımı */
   function settle(ok) {
+    clearGuard();
     cover(false);
     if (pending) { const p = pending; pending = null; p(!!ok); }
   }
@@ -117,16 +132,16 @@ window.ADS = (function () {
     cover(true);
 
     return new Promise(function (resolve) {
-      const guard = setTimeout(function () {
-        // SDK cevap vermedi → oyunu her hâlükârda serbest bırak
+      pending = resolve;
+      // Reklam BAŞLAMAZSA devreye girer. Başlarsa SDK_GAME_PAUSE bunu
+      // iptal eder, böylece gerçek reklam yarıda kesilmez.
+      guardTimer = setTimeout(function () {
         document.dispatchEvent(new CustomEvent('ads:resume'));
         settle(false);
-      }, CFG.TIMEOUT_MS);
-
-      pending = function (ok) { clearTimeout(guard); resolve(ok); };
+      }, CFG.START_TIMEOUT_MS);
 
       try { window.sdk.showBanner(); }
-      catch (err) { clearTimeout(guard); settle(false); }
+      catch (err) { settle(false); }
     });
   }
 
@@ -144,15 +159,14 @@ window.ADS = (function () {
     cover(true);
 
     return new Promise(function (resolve) {
-      const guard = setTimeout(function () {
+      pending = resolve;
+      guardTimer = setTimeout(function () {
         document.dispatchEvent(new CustomEvent('ads:resume'));
         settle(false);
-      }, CFG.REWARD_TIMEOUT_MS);
-
-      pending = function (ok) { clearTimeout(guard); resolve(ok); };
+      }, CFG.START_TIMEOUT_MS);
 
       try { window.sdk.showBanner(); }
-      catch (err) { clearTimeout(guard); settle(false); }
+      catch (err) { settle(false); }
     });
   }
 
