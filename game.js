@@ -546,14 +546,14 @@ function useHint(){
   }
   if (window.ADS && window.ADS.enabled()){
     SFX.musicOff();
-    window.ADS.rewarded().then(odul => {
+    // İpucu HER DURUMDA verilir. Reklam gelmezse (doluluk yok, reklam
+    // engelleyici, zayıf bağlantı, oyun henüz onaylanmamış) bu bizim
+    // sorunumuz; çocuğu cezalandırmayız.
+    window.ADS.rewarded().then(() => {
       SFX.musicOn();
-      if (odul){
-        buzz(20);
-        revealCards(1400);
-      } else {
-        showTip('Reklam yüklenemedi');
-      }
+      buzz(20);
+      beep(880, 0.08, 'sine');
+      revealCards(1400);
     });
   }
 }

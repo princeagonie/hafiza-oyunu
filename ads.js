@@ -29,6 +29,10 @@ window.ADS = (function () {
     // Fuarda takılı kalan bir reklam = ölü oyun. Bu yüzden şart.
     TIMEOUT_MS: 8000,
 
+    // Ödüllü reklam için daha kısa: çocuk ipucu butonuna basmış,
+    // ekrana bakıp bekliyor. 8 saniye orada çok uzun.
+    REWARD_TIMEOUT_MS: 3500,
+
     // İki reklam arasında en az bu kadar süre geçsin (saniye).
     MIN_GAP_S: 45
   };
@@ -66,7 +70,7 @@ window.ADS = (function () {
             break;
           case 'SDK_ERROR':
           case 'AD_ERROR':
-            finish();
+            settle(false);
             break;
         }
       }
@@ -85,10 +89,14 @@ window.ADS = (function () {
     if (el) el.classList.toggle('show', !!on);
   }
 
-  function finish() {
+  /* Bekleyen reklam isteğini sonuçlandırır.
+     ok = true  → reklam gerçekten baştan sona gösterildi
+     ok = false → hata, doluluk yok veya zaman aşımı */
+  function settle(ok) {
     cover(false);
-    if (pending) { const p = pending; pending = null; p.resolve(); }
+    if (pending) { const p = pending; pending = null; p(!!ok); }
   }
+  function finish() { settle(true); }
 
   /* ---------- dışa açık API ---------- */
 
@@ -108,18 +116,16 @@ window.ADS = (function () {
     cover(true);
 
     return new Promise(function (resolve) {
-      pending = { resolve: resolve };
       const guard = setTimeout(function () {
-        // SDK cevap vermedi → oyunu serbest bırak
+        // SDK cevap vermedi → oyunu her hâlükârda serbest bırak
         document.dispatchEvent(new CustomEvent('ads:resume'));
-        finish();
+        settle(false);
       }, CFG.TIMEOUT_MS);
 
-      const orig = resolve;
-      pending.resolve = function () { clearTimeout(guard); orig('gosterildi'); };
+      pending = function (ok) { clearTimeout(guard); resolve(ok); };
 
       try { window.sdk.showBanner(); }
-      catch (err) { clearTimeout(guard); finish(); }
+      catch (err) { clearTimeout(guard); settle(false); }
     });
   }
 
@@ -137,24 +143,15 @@ window.ADS = (function () {
     cover(true);
 
     return new Promise(function (resolve) {
-      let verildi = false;
-      pending = { resolve: function(){} };
-
       const guard = setTimeout(function () {
         document.dispatchEvent(new CustomEvent('ads:resume'));
-        cover(false); pending = null;
-        resolve(verildi);
-      }, CFG.TIMEOUT_MS);
+        settle(false);
+      }, CFG.REWARD_TIMEOUT_MS);
 
-      pending.resolve = function () {
-        clearTimeout(guard);
-        cover(false); pending = null;
-        verildi = true;
-        resolve(true);
-      };
+      pending = function (ok) { clearTimeout(guard); resolve(ok); };
 
       try { window.sdk.showBanner(); }
-      catch (err) { clearTimeout(guard); cover(false); pending = null; resolve(false); }
+      catch (err) { clearTimeout(guard); settle(false); }
     });
   }
 
