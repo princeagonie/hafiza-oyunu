@@ -12,7 +12,7 @@
    ========================================================= */
 'use strict';
 
-const SURUM  = 'v2';   // Foxy -> Foks adlandırması
+const SURUM  = 'v3';   // reklamsiz surum + isim degisikligi
 const ONBELLEK = 'ataturk-hafiza-' + SURUM;
 
 /* Kurulumda hemen indirilecekler.
@@ -29,12 +29,8 @@ const CEKIRDEK = [
   './assets/sfx/level.ogg'
 ];
 
-/* Bu adresler ASLA önbelleğe alınmaz — reklam ve ölçüm istekleri
-   her zaman canlı olmalı, eski reklam göstermek olmaz. */
-function atlanacakMi(url) {
-  return /gamemonetize|googlesyndication|doubleclick|imasdk|google-analytics|googletagmanager/i
-         .test(url.hostname);
-}
+/* Oyun tamamen reklamsız; üçüncü taraf istek yok.
+   Yalnızca fontlar dışarıdan geliyor, onlar da önbelleğe alınıyor. */
 
 /* ---------------------------------------------------------
    KURULUM
@@ -90,7 +86,6 @@ self.addEventListener('fetch', (e) => {
 
   let url;
   try { url = new URL(istek.url); } catch (err) { return; }
-  if (atlanacakMi(url)) return;                 // reklam istekleri dokunulmaz
 
   // Ses dosyaları Range isteği yapabilir; bunları önce ağa bırak,
   // ağ yoksa önbellekteki tam kopyayı ver.

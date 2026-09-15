@@ -429,22 +429,6 @@ h1 span{color:var(--red)}
 }
 
 /* =========================================================
-   REKLAM
-   ========================================================= */
-#ad-slot{flex:0 0 auto}
-body:not(.ads-on) #ad-slot{display:none}
-
-/* Reklam yüklenirken gösterilen örtü */
-#ad-cover{
-  position:fixed; inset:0; z-index:80; display:none;
-  background:rgba(59,42,31,.92); color:#fff;
-  align-items:center; justify-content:center; flex-direction:column; gap:14px;
-  font-family:var(--font-display); font-weight:600; font-size:17px;
-}
-#ad-cover.show{display:flex}
-#ad-cover small{font-family:var(--font-ui); font-weight:700; font-size:12px; opacity:.65}
-
-/* =========================================================
    KISA EKRANLAR (ör. 640px yükseklik) — her şey sığsın
    ========================================================= */
 @media (max-height:680px){
@@ -472,7 +456,6 @@ body:not(.ads-on) #ad-slot{display:none}
   display:grid; place-items:center; padding:0 4px;
   box-shadow:0 2px 0 var(--red-dk);
 }
-.hint-btn.ad .hint-badge{background:var(--gold); box-shadow:0 2px 0 #A87614; font-size:8.5px}
 .hint-btn:disabled{opacity:.4; box-shadow:none}
 
 /* =========================================================

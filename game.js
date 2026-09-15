@@ -8,12 +8,6 @@
    AYARLAR
    --------------------------------------------------------- */
 const CONFIG = {
-  /* Reklam: ads.js içindeki GAME_ID doluysa çalışır, boşsa hiç çıkmaz.
-     Yani fuar sürümü için ayrıca bir şey yapmana gerek yok.
-     ADS_EVERY_N_LEVELS = 3  →  her 3 bölümde bir reklam (~16 reklam / 50 bölüm).
-     Daha sık istersen 2, daha seyrek istersen 4 yap. */
-  ADS_EVERY_N_LEVELS: 3,
-
   LEVELS: 50,
   FLIP_BACK_MS: 900,
 
@@ -162,15 +156,10 @@ function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
 function regionOf(level){ return Math.min(CONFIG.REGIONS.length - 1, Math.floor((level - 1) / 10)); }
 function isPeekLevel(level){ return level % CONFIG.PEEK_EVERY === 0; }
 
-/* Reklam oynarken oyun tamamen susar (aşağıdaki ads:pause/ads:resume
-   dinleyicileri bunu çevirir). GameMonetize kuralı: reklam sırasında
-   arka planda oyun sesi çalması yasak. */
-let reklamSusturdu = false;
-
 /* Kısa titreşim. Desteklemeyen cihazda sessizce yok sayılır.
    Mobilde oyunun "gerçek" hissettirmesini en çok bu sağlıyor. */
 function buzz(ms){
-  if (!save.sound || reklamSusturdu) return;
+  if (!save.sound) return;
   try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e){}
 }
 
@@ -241,7 +230,7 @@ const SFX = {
   },
 
   play(key, fallback){
-    if (!save.sound || reklamSusturdu) return;
+    if (!save.sound) return;
     if (this.ready[key] && this.files[key]){
       try {
         const c = this.files[key].cloneNode();
@@ -265,7 +254,7 @@ const SFX = {
 /* ---- dosya yoksa devreye giren üretilmiş sesler ---- */
 let actx = null;
 function beep(freq, dur, type, vol){
-  if (!save.sound || reklamSusturdu) return;
+  if (!save.sound) return;
   try {
     if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
     if (actx.state === 'suspended') actx.resume();
@@ -308,21 +297,6 @@ function confetti(n){
     setTimeout(() => d.remove(), 4200);
   }
 }
-
-/* ---------------------------------------------------------
-   Reklam kancası — fuar sürümünde kapalı
-   --------------------------------------------------------- */
-function adMaybe(level){
-  if (!window.ADS || !window.ADS.enabled()) return Promise.resolve();
-  if (level % CONFIG.ADS_EVERY_N_LEVELS !== 0) return Promise.resolve();
-  return window.ADS.interstitial();
-}
-
-/* Reklam sırasında oyunun TAMAMEN susması gerekiyor.
-   GameMonetize belgesi: "It is important that the game is muted, as
-   background audio through video advertisements is forbidden." */
-document.addEventListener('ads:pause',  () => { reklamSusturdu = true;  SFX.musicOff(); });
-document.addEventListener('ads:resume', () => { reklamSusturdu = false; SFX.musicOn();  });
 
 /* ---------------------------------------------------------
    Oyun durumu
@@ -511,22 +485,11 @@ function updateHud(){
 
 function updateHintBtn(){
   const b = $('#btn-hint');
-  const reklamVar = window.ADS && window.ADS.enabled();
-  if (state.hints > 0){
-    b.disabled = false;
-    b.classList.remove('ad');
-    $('#hint-badge').textContent = state.hints;
-    b.setAttribute('aria-label', 'İpucu (' + state.hints + ' hakkın var)');
-  } else if (reklamVar){
-    b.disabled = false;
-    b.classList.add('ad');
-    $('#hint-badge').textContent = 'AD';
-    b.setAttribute('aria-label', 'Reklam izleyip ipucu al');
-  } else {
-    b.disabled = true;
-    b.classList.remove('ad');
-    $('#hint-badge').textContent = '0';
-  }
+  b.disabled = state.hints <= 0;
+  $('#hint-badge').textContent = state.hints;
+  b.setAttribute('aria-label', state.hints > 0
+    ? 'İpucu (' + state.hints + ' hakkın var)'
+    : 'İpucu hakkın kalmadı');
 }
 
 /* İpucu: eşleşmemiş kartları kısa süre gösterir. */
@@ -542,27 +505,12 @@ function revealCards(ms){
 }
 
 function useHint(){
-  if (state.locked) return;
-  if (state.hints > 0){
-    state.hints--;
-    updateHintBtn();
-    buzz(20);
-    beep(880, 0.08, 'sine');
-    revealCards(1400);
-    return;
-  }
-  if (window.ADS && window.ADS.enabled()){
-    SFX.musicOff();
-    // İpucu HER DURUMDA verilir. Reklam gelmezse (doluluk yok, reklam
-    // engelleyici, zayıf bağlantı, oyun henüz onaylanmamış) bu bizim
-    // sorunumuz; çocuğu cezalandırmayız.
-    window.ADS.rewarded().then(() => {
-      SFX.musicOn();
-      buzz(20);
-      beep(880, 0.08, 'sine');
-      revealCards(1400);
-    });
-  }
+  if (state.locked || state.hints <= 0) return;
+  state.hints--;
+  updateHintBtn();
+  buzz(20);
+  beep(880, 0.08, 'sine');
+  revealCards(1400);
 }
 
 /* Ezberleme anı: bazı bölümlerde başta tüm kartlar açık gösterilir. */
@@ -747,7 +695,7 @@ function finishLevel(){
   const last = state.level >= CONFIG.LEVELS;
   $('#btn-next').textContent = last ? 'Bitir' : 'Sonraki Bölüm';
 
-  adMaybe(state.level).then(() => showScreen('scr-win'));
+  showScreen('scr-win');
 }
 
 function nextLevel(){
@@ -786,27 +734,11 @@ function updateSoundBtn(){
 /* ---------------------------------------------------------
    Bağlantılar
    --------------------------------------------------------- */
-/* "Oyna" butonunda reklam.
-   GameMonetize belgesi reklamın çağrılmasını beklediği durumları
-   sayıyor ve ilk sırada "play button" var; SDK doğrulaması da bunu
-   arıyor. Oturumda yalnızca BİR kez gösterilir — çocuk oyununda her
-   Oyna basışında reklam çıkarmak kabul edilemez. */
-let acilisReklamiGosterildi = false;
-
 on('#btn-play', 'click', () => {
   beep(560, 0.05, 'sine');            // sesi ilk dokunuşta uyandır
-  const haritayaGec = () => {
-    SFX.musicOn();
-    renderMap(regionOf(save.unlocked));
-    showScreen('scr-map');
-  };
-
-  if (!acilisReklamiGosterildi && window.ADS && window.ADS.enabled()){
-    acilisReklamiGosterildi = true;
-    window.ADS.interstitial().then(haritayaGec);   // reklam gelmezse de devam eder
-  } else {
-    haritayaGec();
-  }
+  SFX.musicOn();
+  renderMap(regionOf(save.unlocked));
+  showScreen('scr-map');
 });
 
 on('#btn-continue', 'click', () => {
@@ -921,4 +853,3 @@ loadSave();
 SFX.init();
 updateSoundBtn();
 refreshStart();
-document.body.classList.toggle('ads-on', !!(window.ADS && window.ADS.enabled()));
