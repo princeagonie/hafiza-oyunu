@@ -12,7 +12,7 @@
    ========================================================= */
 'use strict';
 
-const SURUM  = 'v3';   // reklamsiz surum + isim degisikligi
+const SURUM  = 'v4';   // yeni kapak fotografi
 const ONBELLEK = 'ataturk-hafiza-' + SURUM;
 
 /* Kurulumda hemen indirilecekler.
@@ -22,7 +22,7 @@ const CEKIRDEK = [
   './',
   './index.html',
   './manifest.json',
-  './assets/ulku-child.jpg',
+  './assets/kapak.jpeg',
   './assets/sfx/flip.ogg',
   './assets/sfx/match.ogg',
   './assets/sfx/wrong.ogg',

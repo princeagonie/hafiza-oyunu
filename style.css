@@ -121,27 +121,28 @@ body.in-game .bgdeco{opacity:.4; transition:opacity .35s ease}
    ========================================================= */
 #scr-start{justify-content:center; align-items:center; text-align:center}
 
-.cover{position:relative; margin:0 0 16px; width:100%; max-width:200px}
+.cover{position:relative; margin:0 0 16px; width:100%; max-width:190px}
+/* Fotoğraf 768x1376 (oran 0,558). Çerçeve 3/5 (0,60) seçildi:
+   yalnızca %7 kırpılıyor ve object-position:bottom sayesinde bu kırpma
+   üstteki boş gökyüzünden alınıyor. Böylece Atatürk, Ülkü ve köpek
+   üçü de kadrajda kalıyor. */
 .cover-frame{
-  position:relative; aspect-ratio:3/4; overflow:hidden;
+  position:relative; aspect-ratio:3/5; overflow:hidden;
   border-radius:var(--r-lg); border:5px solid #fff;
   box-shadow:0 5px 0 rgba(59,42,31,.10), 0 16px 28px rgba(59,42,31,.20);
   transform:rotate(-2.5deg);
 }
-/* object-position:top → alttaki arşiv yazısı kırpılır */
 .cover-frame img{
-  width:100%; height:100%; object-fit:cover; object-position:center top;
+  width:100%; height:100%; object-fit:cover; object-position:center bottom;
   filter:sepia(.34) contrast(1.05) brightness(1.03);
 }
 .cover-frame::after{
   content:""; position:absolute; inset:0;
   box-shadow:inset 0 0 40px rgba(59,42,31,.18);
 }
-.cover-foks{
-  position:absolute; width:62px; height:62px; right:-26px; bottom:14px;
-  filter:drop-shadow(0 5px 10px rgba(59,42,31,.28));
-  animation:bob 3s ease-in-out infinite;
-}
+/* Not: kapakta çizgi film Foks çıkartması YOK — fotoğrafta zaten
+   gerçek köpek var, ikisi birden hem kalabalık duruyor hem de
+   çıkartma ya köpeğin ya alt yazının üstüne biniyordu. */
 .cover-flag{
   position:absolute; width:48px; height:48px; left:-22px; top:-14px;
   filter:drop-shadow(0 5px 10px rgba(59,42,31,.28));
@@ -433,7 +434,6 @@ h1 span{color:var(--red)}
    ========================================================= */
 @media (max-height:680px){
   .cover{max-width:150px; margin-bottom:12px}
-  .cover-foks{width:50px; height:50px}
   .cover-flag{width:40px; height:40px}
   h1{font-size:23px}
   .modes{margin-top:16px; gap:8px}
